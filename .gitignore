@@ -1,0 +1,18 @@
+# environments
+env/
+venv/
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# models (large files)
+models/
+*.safetensors
+*.bin
+*.pt
+
+# os
+.DS_Store
+Thumbs.db
