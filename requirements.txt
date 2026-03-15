@@ -1,0 +1,39 @@
+# ============================================================
+# HRES - Hallucination Detection Pipeline
+# Requirements
+# ============================================================
+
+# ── PyTorch (CUDA) ──────────────────────────────────────────
+# Install PyTorch SEPARATELY with your CUDA version FIRST.
+# Do NOT install torch from this file directly.
+#
+#   CUDA 12.4 (recommended):
+#     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+#
+#   CUDA 12.1:
+#     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+#   CUDA 11.8:
+#     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# Check your CUDA version with: nvcc --version
+# ────────────────────────────────────────────────────────────
+
+# Hugging Face stack
+transformers>=4.40.0
+accelerate>=0.30.0
+huggingface_hub>=0.22.0
+safetensors>=0.4.0
+
+# Data processing
+pandas>=2.0.0
+openpyxl>=3.1.0
+numpy>=1.26.0
+tqdm>=4.66.0
+
+# PDF text extraction
+PyMuPDF>=1.24.0
+
+# NLI pipeline (NLI_check.py)
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
