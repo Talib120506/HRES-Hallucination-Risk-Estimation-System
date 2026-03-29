@@ -1,0 +1,2 @@
+method,n_components,classifier,accuracy
+PCA_LDA,300,XGBoost,0.6363636363636364

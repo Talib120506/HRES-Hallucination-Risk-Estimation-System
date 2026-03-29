@@ -6,13 +6,32 @@ venv/
 # python
 __pycache__/
 *.pyc
+*.pyo
 
-# models (large files)
-models/
+# models (large files) - uncomment if tracking
+# models/TinyLlama/  # Uncomment to ignore pre-trained weights
+# models/*.pkl       # Uncomment to ignore trained model artifacts
+models/nli_index/  # FAISS indices are large, ignored
 *.safetensors
 *.bin
 *.pt
 
+# large data files (optional - uncomment if you don't want to track)
+# data/processed/
+# data/results/
+
+# temporary/cache files
+*.pickle
+.cache/
+*.tmp
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # os
 .DS_Store
 Thumbs.db
+
