@@ -120,56 +120,35 @@ When the pipelines disagree, the system flags the answer as UNCERTAIN and recomm
 
 ## Project Structure
 
-```
-Hallucination-Main/
-|
-|-- README.md                         # This file
-|-- requirements.txt                  # Python dependencies
-|-- .gitignore                        # Excludes env/, models/, __pycache__, large binaries
-|
-|-- ## Core Pipeline (run in order to build from scratch) ##
-|-- build_dataset_final.py            # Step 1: Extract hidden-state features from TinyLlama
-|-- shuffle.py                        # Step 2: Shuffle the feature dataset
-|-- train.py                          # Step 3: Train SVM/XGBoost classifiers with grid search
-|-- NLI_check.py                      # Independent: Run blackbox NLI verification
-|
-|-- ## Web Application ##
-|-- app.py                            # Gradio web UI combining both pipelines
-|
-|-- ## Utility Scripts ##
-|-- download_model.py                 # One-time TinyLlama model download
-|-- check.py                          # CUDA/GPU sanity check
-|-- load_model.py                     # Shared model loader (imported by other scripts)
-|-- chat.py                           # Interactive chat with TinyLlama
-|-- tokenlog.py                       # Chat with per-token probability logging
-|-- preview_input.py                  # Preview pipeline inputs (no GPU needed)
-|-- read.py                           # Early prototype for hidden-state extraction
-|-- build_dataset_original.py         # Original prototype dataset builder
-|
-|-- ## Input Data ##
-|-- TechManualQA_350.xlsx             # Master dataset: 350 Q&A pairs
-|-- correct answers.xlsx              # Correct answers for feature extraction
-|-- incorrect answers.xlsx            # Hallucinated answers for feature extraction
-|-- 10 pdfs/                          # 10 source PDF technical manuals
-|
-|-- ## Generated Data ##
-|-- features_correct_incorrect.xlsx   # Raw features (output of build_dataset_final.py)
-|-- features_shuffled_final.xlsx      # Shuffled features (output of shuffle.py)
-|-- training_data_final.xlsx          # PCA-transformed data (output of train.py)
-|-- hallucination_features.csv        # Output of build_dataset_original.py
-|-- nli_results.csv                   # Output of NLI_check.py
-|
-|-- ## Trained Models ##
-|-- svm_model_final.pkl               # Trained SVM classifier
-|-- xgb_model_final.pkl               # Trained XGBoost classifier
-|-- pca_final.pkl                     # Fitted PCA transformer
-|-- scaler_final.pkl                  # Fitted StandardScaler
-|-- variance_threshold_final.pkl      # Fitted VarianceThreshold selector
-|
-|-- ## Directories ##
-|-- models/TinyLlama/                 # TinyLlama-1.1B model weights (~2 GB, git-ignored)
-|-- nli_index/                        # Cached FAISS indexes (one folder per PDF)
-|-- env/                              # Python virtual environment (git-ignored)
+```text
+Hallucination-Main-TinyLlama/
+├── data/
+│   ├── processed/                 # Extracted features, shuffled features
+│   ├── raw/                       # Original datasets (TechManualQA_350.xlsx, training_pairs.xlsx)
+│   ├── results/                   # Evaluation results (e.g. nli_results.csv)
+│   └── training_data/             # Correct & Incorrect answers, final processed excel
+├── models/
+│   ├── nli_index/                 # Cached FAISS indexes per PDF
+│   ├── TinyLlama/                 # TinyLlama-1.1B model weights
+│   └── *.pkl / *.csv              # Trained ML models and transformers (pca_final.pkl, svm_model_final.pkl, etc.)
+├── resources/
+│   └── pdfs/                      # Source PDF technical manuals (e.g. bosch_oven.pdf, etc.)
+├── src/
+│   ├── app.py                     # Main Gradio Web UI combining both pipelines
+│   ├── chat.py                    # Interactive chat with TinyLlama
+│   ├── check.py                   # CUDA/GPU sanity check
+│   ├── download_model.py          # Script to download TinyLlama
+│   ├── load_model.py              # Shared model loader logic
+│   └── utils_internal/            # Utility scripts (preview_input.py, read.py, tokenlog.py)
+├── training/
+│   ├── build_dataset_final.py     # Extract hidden-state features from TinyLlama
+│   ├── build_dataset_original.py  # Original prototype dataset builder
+│   ├── NLI_check.py               # Run blackbox NLI verification
+│   ├── shuffle.py                 # Shuffle the feature dataset
+│   └── train.py                   # Train SVM/XGBoost classifiers with grid search
+├── env/                           # Python virtual environment (git-ignored)
+├── requirements.txt               # Python dependencies
+└── README.md                      # This file
 ```
 
 ---
