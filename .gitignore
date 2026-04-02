@@ -1,0 +1,20 @@
+# Environments
+env/
+venv/
+.env
+
+# Cache and Compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints
+
+# Large data and models (DO NOT PUSH TO GITHUB)
+models/gemma-2-2b-it/
+
+# OS generated files
+.DS_Store
+Thumbs.db

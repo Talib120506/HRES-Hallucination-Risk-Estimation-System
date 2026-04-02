@@ -1,0 +1,2 @@
+method,n_components,n_output_dims,classifier,accuracy
+PCA,150,150,LogisticRegression,0.6835867446393762
