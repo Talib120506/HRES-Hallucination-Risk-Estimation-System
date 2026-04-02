@@ -1,0 +1,219 @@
+================================================================================
+                    HRES FULL-STACK APPLICATION
+                    How to Run the Project
+================================================================================
+
+IMPORTANT: You have TWO OPTIONS to run this project:
+
+Option 1: NEW React + FastAPI Full-Stack App (Recommended)
+Option 2: Original Gradio App (Simple, legacy)
+
+================================================================================
+OPTION 1: React + FastAPI Full-Stack Application
+================================================================================
+
+This is the modern, production-ready version with a beautiful UI.
+
+STEP 1: Install Python Dependencies
+------------------------------------
+Open Command Prompt and run:
+
+cd backend
+pip install fastapi uvicorn python-multipart
+
+Note: Other ML dependencies (torch, transformers, etc.) should already be
+installed from the original project setup.
+
+
+STEP 2: Start Backend Server
+-----------------------------
+In Command Prompt (keep this window open):
+
+cd backend
+python run.py
+
+You should see:
+  "HRES API Server starting..."
+  "Uvicorn running on http://0.0.0.0:8000"
+
+Keep this terminal running!
+
+
+STEP 3: Install Frontend Dependencies
+--------------------------------------
+Open a NEW Command Prompt window and run:
+
+cd frontend
+npm install
+
+This will install React, Vite, Tailwind CSS, and other dependencies.
+Wait for installation to complete (may take 2-3 minutes).
+
+
+STEP 4: Start Frontend Server
+------------------------------
+In the same terminal:
+
+npm run dev
+
+You should see:
+  "VITE v5.x.x ready in xxx ms"
+  "Local: http://localhost:5173/"
+
+Keep this terminal running!
+
+
+STEP 5: Open Application
+-------------------------
+Open your web browser and go to:
+
+  http://localhost:5173
+
+You should see the beautiful HRES landing page!
+
+
+STEP 6: Use the Application
+----------------------------
+1. Click "Try It Now" on the landing page
+2. Select "Preloaded Documents" tab
+3. Choose a PDF from dropdown
+4. Enter a question and answer
+5. Click "Analyze Answer"
+6. Wait 30-60 seconds for analysis
+7. View results in the right panel!
+
+
+================================================================================
+OPTION 2: Original Gradio Application (Legacy)
+================================================================================
+
+This is the simpler, original interface that already exists.
+
+STEP 1: Run the Gradio App
+---------------------------
+Open Command Prompt and run:
+
+cd src
+python app.py
+
+STEP 2: Open Application
+-------------------------
+Open your browser and go to:
+
+  http://localhost:7860
+
+The Gradio interface will appear.
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Backend Issues:
+---------------
+Error: "No module named 'fastapi'"
+Fix: pip install fastapi uvicorn python-multipart
+
+Error: "No module named 'torch'"
+Fix: Install PyTorch first (see main README.md)
+
+Error: "Port 8000 already in use"
+Fix: Kill the process using port 8000 or change port in backend/run.py
+
+Error: "Models not found"
+Fix: Ensure all .pkl files exist in models/ directory
+
+
+Frontend Issues:
+----------------
+Error: "npm: command not found"
+Fix: Install Node.js from https://nodejs.org/
+
+Error: "Cannot find module"
+Fix: Delete node_modules and run: npm install
+
+Error: "Port 5173 already in use"
+Fix: Kill the process or vite will suggest another port
+
+Error: "Cannot connect to backend"
+Fix: Ensure backend is running on port 8000
+
+
+================================================================================
+QUICK AUTOMATED STARTUP (Windows)
+================================================================================
+
+Just double-click:   start.bat
+
+This will:
+  1. Install backend dependencies
+  2. Install frontend dependencies
+  3. Start both servers automatically
+  4. Open two terminal windows
+
+Then open: http://localhost:5173
+
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+Backend API: backend/app/main.py
+Frontend App: frontend/src/App.jsx
+API Routes: backend/app/api/routes.py
+Landing Page: frontend/src/pages/LandingPage.jsx
+Main App Page: frontend/src/pages/AppPage.jsx
+
+Startup Scripts:
+  start.bat           - Start everything
+  start_backend.bat   - Start backend only
+  start_frontend.bat  - Start frontend only
+
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+QUICKSTART.md              - Detailed quick start guide
+FULLSTACK_ARCHITECTURE.md  - System architecture overview
+backend/README.md          - Backend API documentation
+frontend/README.md         - Frontend React documentation
+IMPLEMENTATION_COMPLETE.md - Complete feature checklist
+
+
+================================================================================
+API ENDPOINTS (when backend is running)
+================================================================================
+
+API Documentation:  http://localhost:8000/docs
+Health Check:       http://localhost:8000/health
+Preloaded PDFs:     http://localhost:8000/api/preloaded-pdfs
+Predict:            http://localhost:8000/api/predict (POST)
+
+
+================================================================================
+NEED HELP?
+================================================================================
+
+1. Check if backend is running: http://localhost:8000/health
+2. Check if frontend is running: http://localhost:5173
+3. Look for errors in terminal windows
+4. See QUICKSTART.md for detailed troubleshooting
+5. Check the browser console (F12) for frontend errors
+
+
+================================================================================
+SUMMARY
+================================================================================
+
+To run the full-stack app:
+  1. cd backend && python run.py
+  2. (new terminal) cd frontend && npm run dev
+  3. Open http://localhost:5173
+
+To run the Gradio app (simpler):
+  1. cd src && python app.py
+  2. Open http://localhost:7860
+
+Enjoy using HRES!
+================================================================================

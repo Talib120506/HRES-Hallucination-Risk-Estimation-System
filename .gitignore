@@ -35,3 +35,7 @@ models/nli_index/  # FAISS indices are large, ignored
 .DS_Store
 Thumbs.db
 
+#frontend
+frontend/node_modules/
+./node_modules
+
