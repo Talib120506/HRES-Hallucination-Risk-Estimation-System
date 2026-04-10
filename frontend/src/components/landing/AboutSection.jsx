@@ -34,7 +34,6 @@ function AboutSection() {
                   </div>
                   <div className="mt-8 p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 transform group-hover:-translate-y-2 transition-transform duration-500 group-hover:shadow-lg group-hover:shadow-red-500/20">
                      <p className="text-red-600 dark:text-red-400 font-mono text-sm group-hover:animate-pulse">[!] HALLUCINATION DETECTED</p>
-                     <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">Confidence interval fell below 0.95 threshold.</p>
                   </div>
                 </div>
              </div>
@@ -53,7 +52,7 @@ function AboutSection() {
                 As LLMs integrate into critical workflows, their tendency to "hallucinate" plausible but false information has become the biggest barrier to enterprise adoption.
               </p>
               <p>
-                HRES is an advanced detection framework that fundamentally shifts trust. Using a dual-pipeline approach, we don't just ask the model if it's sure—we look at the <strong className="text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors">math inside its hidden layers</strong> to prove it.
+                HRES is an advanced detection framework that fundamentally shifts trust. Using a dual pipeline approach, we don't just ask the model if it's sure we look at the <strong className="text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors">math inside its hidden layers</strong> to prove it.
               </p>
               <div className="pt-4 flex flex-col sm:flex-row gap-4 h-full">
                 <div className="flex-1 p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-700/50 hover:bg-white dark:hover:bg-[#151515] transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-purple-500/10 cursor-default group">
@@ -62,7 +61,7 @@ function AboutSection() {
                 </div>
                 <div className="flex-1 p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700/50 hover:bg-white dark:hover:bg-[#151515] transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/10 cursor-default group">
                   <h4 className="font-bold text-gray-900 dark:text-white mb-1 tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Blackbox</h4>
-                  <p className="text-sm">Cross-references claims via semantic search & NLI.</p>
+                  <p className="text-sm">Cross references claims via semantic search & NLI.</p>
                 </div>
               </div>
             </div>

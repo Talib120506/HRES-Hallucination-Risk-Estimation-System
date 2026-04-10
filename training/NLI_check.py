@@ -260,46 +260,73 @@ def load_nli():
     return _nli_tok, _nli_model
 
 
-def _nli_batch(premises: list, hypothesis: str) -> torch.Tensor:
-    """Run NLI on a batch of (premise, hypothesis) pairs. Returns probs (n, 3)."""
+def _nli_batch(premises: list, hypothesis: str, batch_size: int = 16) -> torch.Tensor:
+    """Run NLI on a batch of premises vs a single hypothesis. Returns probs (n, 3)."""
     tok, model = load_nli()
-    encodings = tok(
-        premises,
-        [hypothesis] * len(premises),
-        return_tensors="pt",
-        truncation=True,
-        max_length=512,
-        padding=True,
-    ).to("cuda")
-    with torch.no_grad():
-        return torch.softmax(model(**encodings).logits, dim=-1).cpu()
+    
+    all_probs = []
+    for i in range(0, len(premises), batch_size):
+        batch_premises = premises[i:i + batch_size]
+        encodings = tok(
+            batch_premises,
+            [hypothesis] * len(batch_premises),
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+            padding=True,
+        ).to("cuda")
+        with torch.no_grad():
+            probs = torch.softmax(model(**encodings).logits, dim=-1).cpu()
+            all_probs.append(probs)
+            
+    return torch.cat(all_probs, dim=0)
 
 
 def run_nli(premise: str, hypothesis: str) -> dict:
     """
-    Sentence-level NLI without sliding windows.
-    Passes the whole chunk into DeBERTa directly for accurate context evaluation.
+    Advanced sliding-window NLI for high-entailment matching.
+    Uses 1-sentence, 2-sentence, and 3-sentence windows, plus the full chunk,
+    to accurately capture varying lengths of context for the hypothesis.
     """
-    answer_steps = [s.strip() for s in re.split(r'\\n|\n', hypothesis) if s.strip()]
-    if len(answer_steps) == 0:
-        answer_steps = [hypothesis]
+    import re
+    
+    # Split chunk into sentences
+    sents = [s.strip() for s in re.split(r'(?<=[.!?])\s+', premise) if len(s.strip()) > 5]
+    
+    if not sents:
+        sents = [premise]
 
-    sum_probs = None
-    for step in answer_steps:
-        step_probs = _nli_batch([premise], step)
-        if sum_probs is None:
-            sum_probs = step_probs.clone()
-        else:
-            sum_probs += step_probs
+    windows = list(sents)
+    
+    # Add sliding windows of 2 sentences
+    for i in range(len(sents) - 1):
+        windows.append(sents[i] + " " + sents[i+1])
+        
+    # Add sliding windows of 3 sentences (if context is spread out)
+    for i in range(len(sents) - 2):
+        windows.append(sents[i] + " " + sents[i+1] + " " + sents[i+2])
+        
+    # Always include the entire chunk as a fallback
+    windows.append(premise)
 
-    probs = (sum_probs / len(answer_steps))[0].tolist()
-    label = NLI_LABEL_MAP[probs.index(max(probs))]
+    # Deduplicate windows to save compute
+    windows = list(set(windows))
+
+    # Process all windows in the chunk at once within a single batch
+    probs_batch = _nli_batch(windows, hypothesis)
+    
+    # Find the window with the highest entailment index
+    best_idx = probs_batch[:, 1].argmax().item()
+    best_probs = probs_batch[best_idx].tolist()
+            
+    label = NLI_LABEL_MAP[best_probs.index(max(best_probs))]
+    
     return {
         "label"        : label,
         "verdict"      : VERDICT_MAP[label],
-        "entailment"   : round(probs[1], 4),
-        "neutral"      : round(probs[2], 4),
-        "contradiction": round(probs[0], 4),
+        "entailment"   : round(best_probs[1], 4),
+        "neutral"      : round(best_probs[2], 4),
+        "contradiction": round(best_probs[0], 4),
     }
 
 

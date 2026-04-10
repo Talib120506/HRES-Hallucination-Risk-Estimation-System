@@ -336,17 +336,32 @@ def nli_batch(premises, hypothesis):
 
 
 def run_nli_on_chunk(premise, hypothesis):
-    # Pass the entire premise and hypothesis to DeBERTa at once instead of splitting
-    # by lines and averaging, which often dilutes the entailment score with neutral fillers.
+    # First, try the full chunk as premise
     probs = nli_batch([premise], hypothesis)[0].tolist()
-    label = NLI_LABEL_MAP[probs.index(max(probs))]
+    best_probs = probs
+    
+    # If entailment is low, also try individual sentences within the chunk
+    # This helps when the relevant statement is buried in a noisy chunk
+    if probs[1] < 0.5:  # entailment < 50%
+        sentences = re.split(r'(?<=[.!?])\s+', premise.strip())
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+        
+        if sentences:
+            # Batch process all sentences at once for efficiency
+            all_probs = nli_batch(sentences, hypothesis)
+            for sent_probs in all_probs:
+                sent_probs = sent_probs.tolist()
+                if sent_probs[1] > best_probs[1]:  # higher entailment
+                    best_probs = sent_probs
+    
+    label = NLI_LABEL_MAP[best_probs.index(max(best_probs))]
     
     return {
         "label": label,
         "verdict": VERDICT_MAP[label],
-        "entailment": round(probs[1], 4),
-        "neutral": round(probs[2], 4),
-        "contradiction": round(probs[0], 4),
+        "entailment": round(best_probs[1], 4),
+        "neutral": round(best_probs[2], 4),
+        "contradiction": round(best_probs[0], 4),
     }
 
 
@@ -397,11 +412,9 @@ def blackbox_predict(pdf_path, question, answer):
     best_nli = None
     best_chunk = candidate_chunks[0]
     
-    # Combine question and answer into a full logical statement for the NLI model
-    full_hypothesis = f"Question: {question} Answer: {answer}"
-    
+    # Use answer as hypothesis directly (full Q&A format causes false positives)
     for chunk in candidate_chunks:
-        nli = run_nli_on_chunk(premise=chunk, hypothesis=full_hypothesis)
+        nli = run_nli_on_chunk(premise=chunk, hypothesis=answer)
         if best_nli is None or nli["entailment"] > best_nli["entailment"]:
             best_nli = nli
             best_chunk = chunk

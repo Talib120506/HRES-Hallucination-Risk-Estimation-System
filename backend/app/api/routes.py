@@ -7,7 +7,9 @@ import tempfile
 from typing import Optional
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from pydantic import BaseModel
-from ..services.detection import whitebox_predict, blackbox_predict
+from ..services.detection import whitebox_predict, blackbox_predict, get_pdf_index
+from ..services.model_loader import get_llama, get_embedder
+from ..services.answer_generator import generate_answer
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -18,17 +20,14 @@ router = APIRouter()
 
 # ── Response Models ──────────────────────────────────────────────────────────
 
-class WhiteboxModelResult(BaseModel):
+class WhiteboxResult(BaseModel):
+    """Single classifier result (matches app.py output format)"""
+    model: str
     prediction: int
     label: str
     confidence: float
     prob_correct: float
     prob_hallucinated: float
-
-
-class WhiteboxResult(BaseModel):
-    SVM: Optional[WhiteboxModelResult] = None
-    XGBoost: Optional[WhiteboxModelResult] = None
 
 
 class BlackboxResult(BaseModel):
@@ -41,10 +40,18 @@ class BlackboxResult(BaseModel):
 
 class PredictResponse(BaseModel):
     success: bool
-    whitebox: Optional[dict] = None
+    generated_answer: Optional[str] = None
+    whitebox: Optional[WhiteboxResult] = None
     whitebox_error: Optional[str] = None
-    blackbox: Optional[dict] = None
+    blackbox: Optional[BlackboxResult] = None
     blackbox_error: Optional[str] = None
+
+
+class GenerateAnswerResponse(BaseModel):
+    success: bool
+    answer: Optional[str] = None
+    context: Optional[str] = None
+    error: Optional[str] = None
 
 
 class PreloadedPDF(BaseModel):
@@ -147,6 +154,95 @@ async def predict_hallucination(
     
     finally:
         # Clean up temporary file
+        if temp_file and os.path.exists(temp_file.name):
+            try:
+                os.unlink(temp_file.name)
+            except Exception:
+                pass
+
+
+@router.post("/generate-and-verify")
+async def generate_and_verify_answer(
+    file: Optional[UploadFile] = File(None),
+    preloaded_pdf: Optional[str] = Form(None),
+    question: str = Form(...),
+):
+    """
+    Generate an answer using Gemma based on the PDF context, then verify it.
+    """
+    # Validate inputs
+    if not question or not question.strip():
+        raise HTTPException(status_code=400, detail="Question is required")
+    
+    # Determine PDF path
+    pdf_path = None
+    temp_file = None
+    
+    try:
+        if preloaded_pdf:
+            pdf_path = os.path.join(PDFS_DIR, preloaded_pdf)
+            if not os.path.exists(pdf_path):
+                raise HTTPException(status_code=404, detail=f"Preloaded PDF '{preloaded_pdf}' not found")
+        elif file:
+            if not file.filename.lower().endswith('.pdf'):
+                raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+            
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+            content = await file.read()
+            
+            if len(content) > 50 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail="File size exceeds 50MB limit")
+            
+            temp_file.write(content)
+            temp_file.close()
+            pdf_path = temp_file.name
+        else:
+            raise HTTPException(status_code=400, detail="Either upload a PDF or select a preloaded PDF")
+        
+        # Step 1: Generate answer using Gemma
+        generated_answer = None
+        gen_error = None
+        try:
+            generated_answer, gen_error = generate_answer(pdf_path, question)
+        except Exception as e:
+            gen_error = f"Answer generation failed: {str(e)}"
+        
+        if gen_error or not generated_answer:
+            return {
+                "success": False,
+                "generated_answer": None,
+                "whitebox": None,
+                "whitebox_error": gen_error or "Failed to generate answer",
+                "blackbox": None,
+                "blackbox_error": None,
+            }
+        
+        # Step 2: Run whitebox pipeline on the generated answer
+        wb_results = None
+        wb_error = None
+        try:
+            wb_results, wb_error = whitebox_predict(pdf_path, question, generated_answer)
+        except Exception as e:
+            wb_error = f"Whitebox pipeline failed: {str(e)}"
+        
+        # Step 3: Run blackbox pipeline on the generated answer
+        bb_results = None
+        bb_error = None
+        try:
+            bb_results, bb_error = blackbox_predict(pdf_path, question, generated_answer)
+        except Exception as e:
+            bb_error = f"Blackbox pipeline failed: {str(e)}"
+        
+        return {
+            "success": True,
+            "generated_answer": generated_answer,
+            "whitebox": wb_results,
+            "whitebox_error": wb_error,
+            "blackbox": bb_results,
+            "blackbox_error": bb_error,
+        }
+    
+    finally:
         if temp_file and os.path.exists(temp_file.name):
             try:
                 os.unlink(temp_file.name)

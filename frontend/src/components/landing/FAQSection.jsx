@@ -45,15 +45,15 @@ const FAQSection = () => {
   const faqs = [
     {
       question: "What is HRES?",
-      answer: "HRES (Hallucination Risk Estimation System) is a tool designed to analyze AI-generated outputs and assess their risk of containing hallucinations—information that is factually incorrect or unsupported by the given context."
+      answer: "HRES (Hallucination Risk Estimation System) is a tool designed to analyze AI generated outputs and assess their risk of containing hallucinations information that is factually incorrect or unsupported by the given context."
     },
     {
       question: "How does the evaluation process work?",
-      answer: "We use a multi-step process that compares the generated text against verified contexts using natural language inference (NLI) techniques. The system breaks down the text, checks factual alignment, and provides a confidence score indicating the likelihood of hallucination."
+      answer: "We use a multi step process that compares the generated text against verified contexts using natural language inference (NLI) techniques. The system breaks down the text, checks factual alignment, and provides a confidence score indicating the likelihood of hallucination."
     },
     {
-      question: "Can I use HRES with my own domain-specific data?",
-      answer: "Yes, HRES is designed to be adaptable. You can index your own domain-specific documents, which the system will use as the ground truth context when evaluating new text generations."
+      question: "Can I use HRES with my own domain specific data?",
+      answer: "Yes, HRES is designed to be adaptable. You can index your own domain specific documents, which the system will use as the ground truth context when evaluating new text generations."
     },
     {
       question: "What formats do you support for context documents?",

@@ -15,7 +15,7 @@ function HowItWorksSection() {
             The Architecture of <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-text-gradient bg-[length:200%_auto]">Truth</span>
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            A symphony of internal state projection and semantic validation. Here is how our dual-engine architecture guarantees uncompromising accuracy.
+            A symphony of internal state projection and semantic validation. Here is how our dual engine architecture guarantees uncompromising accuracy.
           </p>
         </div>
 
@@ -40,8 +40,8 @@ function HowItWorksSection() {
             <div className="space-y-6 text-gray-600 dark:text-gray-400 relative border-l-2 border-purple-100 dark:border-purple-900/30 ml-3 pl-6">
               {[
                 { title: 'Vector Retrieval', desc: 'Scan document via semantic search.' },
-                { title: 'Model Injection', desc: 'Feed context & query into TinyLlama.' },
-                { title: 'State Capture', desc: 'Isolate 2048-dim internal hidden states.' },
+                { title: 'Model Injection', desc: 'Feed context & query into Gemma.' },
+                { title: 'State Capture', desc: 'Isolate 2304 dim internal hidden states.' },
                 { title: 'Dim Reduction', desc: 'Apply rapid PCA to isolate signal.' },
                 { title: 'SVM Classification', desc: 'Mathematically pinpoint confidence.' },
               ].map((step, i) => (
@@ -69,8 +69,8 @@ function HowItWorksSection() {
             <div className="space-y-6 text-gray-600 dark:text-gray-400 relative border-l-2 border-blue-100 dark:border-blue-900/30 ml-3 pl-6">
               {[
                 { title: 'Intelligent Chunking', desc: 'Slice raw PDFs into localized contexts.' },
-                { title: 'FAISS Indexing', desc: 'Construct sub-ms exact semantic indexes.' },
-                { title: 'Top-K Matching', desc: 'Identify critical passage relationships.' },
+                { title: 'FAISS Indexing', desc: 'Construct sub ms exact semantic indexes.' },
+                { title: 'Top K Matching', desc: 'Identify critical passage relationships.' },
                 { title: 'DeBERTa NLI', desc: 'Execute natural language inference logic.' },
                 { title: 'Truth Verdict', desc: 'Determine Entailment vs Contradiction.' },
               ].map((step, i) => (
@@ -89,7 +89,7 @@ function HowItWorksSection() {
                <span className="px-3 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-mono text-sm font-bold">IF (E1 & E2 == AGREE)</span>
              </div>
              <p className="text-xl font-medium text-gray-800 dark:text-gray-200">
-               Ultimate zero-trust hallucination verdict.
+               Ultimate zero trust hallucination verdict.
              </p>
           </div>
         </div>

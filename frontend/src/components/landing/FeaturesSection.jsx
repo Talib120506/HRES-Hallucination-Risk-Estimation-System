@@ -8,7 +8,7 @@ function FeaturesSection() {
   const features = [
     {
       icon: '🔬',
-      title: 'Dual-Pipeline Setup',
+      title: 'Dual Pipeline Setup',
       description: 'Our proprietary approach merges internal model analysis with natural language inference, catching nuance that basic prompt-checking misses.',
       colSpan: 'lg:col-span-2'
     },
@@ -26,7 +26,7 @@ function FeaturesSection() {
     },
     {
       icon: '🎯',
-      title: 'Clinical Accuracy',
+      title: 'Pinpoint Accuracy',
       description: 'Trained rigorously against adversarial sets to discern subtle logical missteps from genuine creativity.',
       colSpan: 'lg:col-span-2'
     },

@@ -6,7 +6,7 @@ function HeroSection() {
   const elementsOffset = useParallax(0.15);
 
   return (
-    <section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] transition-colors duration-300 min-h-[90vh] flex items-center pt-20">
+    <section className="relative overflow-hidden bg-white dark:bg-[#0a0a0a] transition-colors duration-300 min-h-[90vh] flex flex-col justify-center pt-32 pb-24">
       {/* Background Decorative Blobs - Fixed Parallax Background */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none"
@@ -22,21 +22,15 @@ function HeroSection() {
         style={{ transform: `translateY(${elementsOffset}px)` }}
       >
         <div className="text-center max-w-4xl mx-auto opacity-0 animate-[fadeInUp_0.8s_ease-out_forwards]">
-          {/* Version / Release pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800/50 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-sm font-medium mb-8 hover:scale-105 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-all duration-300 cursor-default shadow-sm hover:shadow-purple-500/20">
-            <span className="flex h-2 w-2 rounded-full bg-purple-600 dark:bg-purple-400 animate-pulse"></span>
-            Reimagining AI Trust
-          </div>
-
 <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 text-gray-900 dark:text-white transform transition-transform duration-500 hover:scale-[1.01] leading-tight">
             Trust your AI Models with <br className="hidden md:block"/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7c3aed] via-[#f43f5e] to-[#3b82f6] animate-text-gradient hover:from-[#9333ea] hover:to-[#2563eb] transition-colors duration-300 bg-[length:200%_auto] pb-2 inline-block">      
-              Clinical Precision.
+              Absolute Precision.
             </span>
           </h1>
           
           <p className="text-xl md:text-2xl mb-12 text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            HRES uses a revolutionary <span className="text-gray-900 dark:text-white font-semibold">Dual-Pipeline System</span> (Whitebox & Blackbox) to mathematically detect, estimate, and eliminate hallucinations in large language models.
+            HRES uses a <span className="text-gray-900 dark:text-white font-semibold">Dual Pipeline System</span> (Whitebox & Blackbox) to mathematically detect, estimate, and eliminate hallucinations in large language models.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -62,11 +56,11 @@ function HeroSection() {
                 <div className="grid grid-cols-3 gap-6 w-full max-w-3xl mb-8">
                   <div className="h-24 rounded-lg bg-gradient-to-br from-purple-100 to-white dark:from-purple-900/20 dark:to-transparent border border-purple-200 dark:border-purple-800/30 p-4 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
                     <div className="h-3 w-1/2 bg-purple-200 dark:bg-purple-800/50 rounded mb-4"></div>
-                    <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">98.4%</div>
+                    <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">87%</div>
                   </div>
                   <div className="h-24 rounded-lg bg-gradient-to-br from-blue-100 to-white dark:from-blue-900/20 dark:to-transparent border border-blue-200 dark:border-blue-800/30 p-4 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
                     <div className="h-3 w-1/2 bg-blue-200 dark:bg-blue-800/50 rounded mb-4"></div>
-                    <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">3.2ms</div>
+                    <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">35.2 ms</div>
                   </div>
                   <div className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800/30 border border-gray-200 dark:border-gray-800/50 p-4 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
                     <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>

@@ -20,6 +20,14 @@ function UploadTab({ formData, setFormData, onSubmit, errors }) {
 
   return (
     <div className="space-y-6">
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 flex items-center gap-3 transform transition-all duration-300 hover:scale-105 hover:translate-x-2 w-fit cursor-default">
+          <span className="text-3xl animate-bounce">🔍</span> 
+          Document Q&A Analyzer
+        </h2>
+        <div className="h-1 w-24 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mt-2 transition-all duration-500 group-hover:w-full"></div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Upload PDF
