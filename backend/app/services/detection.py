@@ -10,6 +10,11 @@ import re
 import numpy as np
 import torch
 import faiss
+import os
+import sys
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(BASE_DIR, "src"))
+from nli_utils import build_or_load_index, blackbox_predict_unified, SIMILARITY_THRESHOLD, nli_verdict_from_scores
 from ..services.model_loader import get_llama, get_embedder, get_nli, get_classifiers
 from ..utils.pdf_utils import extract_all_text, chunk_text, clean_text
 
@@ -167,120 +172,23 @@ def whitebox_predict(pdf_path, question, answer):
 
 # ── Blackbox Pipeline (matching app.py exactly) ──────────────────────────────
 
-def nli_batch(premises, hypothesis):
-    """Run NLI model on a batch of premises against a single hypothesis"""
-    tok, model = get_nli()
-    encodings = tok(premises, [hypothesis] * len(premises),
-                    return_tensors="pt", truncation=True,
-                    max_length=512, padding=True).to("cuda")
-    with torch.no_grad():
-        probs = torch.softmax(model(**encodings).logits, dim=-1).cpu()
-    del encodings
-    torch.cuda.empty_cache()
-    return probs
-
-
-def run_nli_on_chunk(premise, hypothesis):
-    """Run NLI on a single premise-hypothesis pair (matching app.py)
-    
-    Enhanced to also check individual sentences within the chunk when
-    entailment is low, which helps when the answer is buried in a noisy chunk.
-    """
-    import re
-    
-    # First, try the full chunk as premise
-    probs = nli_batch([premise], hypothesis)[0].tolist()
-    best_probs = probs
-    
-    # If entailment is low, also try individual sentences within the chunk
-    # This helps when the relevant statement is buried in a noisy chunk
-    if probs[1] < 0.5:  # entailment < 50%
-        sentences = re.split(r'(?<=[.!?])\s+', premise.strip())
-        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
-        
-        if sentences:
-            # Batch process all sentences at once for efficiency
-            all_probs = nli_batch(sentences, hypothesis)
-            for sent_probs in all_probs:
-                sent_probs = sent_probs.tolist()
-                if sent_probs[1] > best_probs[1]:  # higher entailment
-                    best_probs = sent_probs
-    
-    label = NLI_LABEL_MAP[best_probs.index(max(best_probs))]
-    
-    return {
-        "label": label,
-        "verdict": VERDICT_MAP[label],
-        "entailment": round(best_probs[1], 4),
-        "neutral": round(best_probs[2], 4),
-        "contradiction": round(best_probs[0], 4),
-    }
-
-
 def blackbox_predict(pdf_path, question, answer):
-    """
-    Run blackbox pipeline: FAISS retrieval + NLI.
-    
-    Returns: (result_dict, error_string)
-    """
-    cache_data, err = get_pdf_index(pdf_path)
-    if err:
-        return None, err
-    index, all_chunks = cache_data["index"], cache_data["chunks"]
-
+    """Blackbox prediction — now delegates to nli_utils.py."""
+    import os
+    from nli_utils import get_embedder, build_or_load_index, blackbox_predict_unified, SIMILARITY_THRESHOLD
     embedder = get_embedder()
-    q_vec = embedder.encode([question], normalize_embeddings=True,
-                            device="cuda").astype(np.float32)
-    a_vec = embedder.encode([answer], normalize_embeddings=True,
-                            device="cuda").astype(np.float32)
 
-    seen = set()
-    candidate_chunks = []
-    max_score = -1.0
-
-    # Reduce TOP_K search width to speed up (checking top 3 is usually enough)
-    for query_vec in [a_vec, q_vec]:
-        distances, indices = index.search(query_vec, min(3, len(all_chunks)))
-        for dist, i in zip(distances[0], indices[0]):
-            if dist > max_score:
-                max_score = float(dist)
-            if i >= 0 and all_chunks[i] not in seen:
-                seen.add(all_chunks[i])
-                candidate_chunks.append(all_chunks[i])
-
-    if not candidate_chunks:
-        return None, "No relevant chunks found"
-
-    # METHOD 1: FAISS Similarity Score Thresholding
-    # If the semantic similarity is too low, the document doesn't contain the answer.
-    SIMILARITY_THRESHOLD = 0.35
-    if max_score < SIMILARITY_THRESHOLD:
-        result = {
-            "verdict": "HALLUCINATION",
-            "entailment": 0.0,
-            "neutral": 0.0,
-            "contradiction": 1.0,
-            "retrieved_context": f"[UNSUPPORTED] Context irrelevant. Highest semantic similarity ({max_score:.2f}) is below threshold ({SIMILARITY_THRESHOLD}).",
-        }
-        gc.collect()
-        return result, None
-
-    best_nli = None
-    best_chunk = candidate_chunks[0]
+    doc_id = os.path.basename(pdf_path)
+    MODELS_DIR = os.path.join(BASE_DIR, "models")
+    doc_index = build_or_load_index(pdf_path, doc_id, embedder, index_dir=os.path.join(MODELS_DIR, "nli_index"))
     
-    # Use answer as hypothesis directly (full Q&A format causes false positives)
-    for chunk in candidate_chunks:
-        nli = run_nli_on_chunk(premise=chunk, hypothesis=answer)
-        if best_nli is None or nli["entailment"] > best_nli["entailment"]:
-            best_nli = nli
-            best_chunk = chunk
+    if doc_index is None:
+        return None, "Could not extract text from PDF"
 
-    result = {
-        "verdict": best_nli["verdict"],
-        "entailment": best_nli["entailment"],
-        "neutral": best_nli["neutral"],
-        "contradiction": best_nli["contradiction"],
-        "retrieved_context": best_chunk[:500],
-    }
-    gc.collect()
+    result = blackbox_predict_unified(
+        doc_index  = doc_index,
+        question   = question,
+        answer     = answer,
+        similarity_threshold = SIMILARITY_THRESHOLD,
+    )
     return result, None

@@ -122,7 +122,7 @@ def get_classifiers():
         
         # Fallback: try to load any available model (backward compatibility)
         model_candidates = [
-            ("best_model_final.pkl", "Best Model"),
+            ("ensemble_stacking.pkl", "Stacking Ensemble"),
             ("svm_model_final.pkl", "SVM"),
             ("ada_model_final.pkl", "AdaBoost"),
             ("lr_model_final.pkl", "Logistic Regression"),

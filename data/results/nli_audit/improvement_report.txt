@@ -1,0 +1,64 @@
+=========================================================
+             NLI SYSTEM IMPROVEMENT REPORT               
+=========================================================
+
+SECTION A — EXECUTIVE SUMMARY
+Overall Accuracy : 87.4%
+False Positive Rate : 4.0% (Correct answers flagged as hallucinations)
+False Negative Rate : 8.5% (Real hallucinations missed entirely)
+Skip/Error Rate  : 0.0%
+
+Diagnosis: The system is too permissive — it is systematically failing to catch real hallucinations (High False Negatives).
+
+SECTION B — ROOT CAUSE ANALYSIS
+[CAUSE-1] Retrieval Similarity Threshold Too Aggressive
+Evidence: max_similarity < 0.70 for grounded answers.
+Rows affected: 20 (16.8% of errors)
+Explanation: The FAISS index failed to find highly similar context, so the NLI pipeline instantly failed the answer before even checking entailment.
+
+[CAUSE-2] NLI Model Fooled by Hallucinated Answers
+Evidence: entailment_score >= 0.90 for actual hallucinations.
+Rows affected: 81 (68.1% of errors)
+Explanation: The hallucination dataset uses highly deceptive or lexically overlapping phrases that the baseline NLI model incorrectly maps as 'Entailed'.
+
+[CAUSE-3] High 'UNCERTAIN' Verdict Ambiguity
+Evidence: NLI verdict fell into the 0.60–0.90 entailment gap.
+Rows affected: 37 (31.1% of errors)
+Explanation: The model lacks confidence, returning 'UNCERTAIN', which defaults to flagging the text as hallucinated (Label=1). If these were mostly correct answers (Label=0), the entailment threshold is too strict.
+
+[CAUSE-4] Weak Retrieval for Specific Documents
+Evidence: Disproportionate errors concentrated in a few PDFs.
+Rows affected: 30 (25.2% of errors)
+Problematic doc_ids: lg_home_theater.pdf, omron_monitor.pdf, tesla_model_s.pdf
+Explanation: These specific PDFs may have poor text extraction, OCR issues, or complex chunking requirements that standard FAISS Euclidean distance is failing to map.
+
+SECTION C — CONCRETE IMPROVEMENT RECOMMENDATIONS
+[REC-1] Lower the Similarity Gate Threshold
+What to change: Reduce SIMILARITY_THRESHOLD from 0.70 to roughly 0.63.
+Where: src/nli_utils.py (SIMILARITY_THRESHOLD variable)
+Expected impact: Would immediately recover up to 20 False Positives by allowing the NLI model to actually evaluate them.
+Priority: HIGH
+
+[REC-2] Tune the Entailment Cutoff
+What to change: Update ENTAILMENT_THRESHOLD from 0.90 to roughly 0.86 based on automated tuning sweep.
+Where: src/nli_utils.py
+Expected impact: Will explicitly maximize hallucination detection F1 score and Youden's J based on this dataset.
+Priority: HIGH
+
+[REC-3] Increase TOP_K_RETRIEVAL / Enable Reranker
+What to change: Increase context fetch size from top_k=3 to top_k=5, or implement CrossEncoder reranking.
+Where: src/nli_utils.py (search_index function)
+Expected impact: Should resolve the heavy error concentration mapped to lg_home_theater.pdf, omron_monitor.pdf, tesla_model_s.pdf.
+Priority: HIGH
+
+[REC-4] Fine-tune DeBERTa on Domain Data
+What to change: The base model is being fooled by lexically similar but logically hallucinated phrases. It requires contrastive fine-tuning.
+Where: Execute training/finetune_nli.py using your hallucinated data.
+Expected impact: Will directly teach the model to distinguish nuanced domain contradictions, reducing the 81 False Negatives that achieved >=0.90 entailment magically.
+Priority: HIGH
+
+SECTION D — NEXT STEPS
+1. Apply the highest priority [REC] configuration changes in src/nli_utils.py.
+2. Re-run this audit pipeline (`python training/nli_audit_pipeline.py`).
+3. Compare the new `accuracy_per_document.png` and `confusion_matrix.png` outputs against the current baseline.
+4. If False Negatives persist, trigger a full `finetune_nli.py` training sequence to update the model weights.

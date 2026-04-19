@@ -39,14 +39,13 @@ VT_PATH        = os.path.join(MODELS_DIR, "variance_threshold_final.pkl")
 
 HIDDEN_DIM     = 2304
 MAX_CTX_CHARS  = 1600
-CHUNK_SIZE     = 100
-CHUNK_OVERLAP  = 30
-TOP_K          = 5
-EMBED_MODEL    = "BAAI/bge-small-en-v1.5"
-NLI_MODEL      = "cross-encoder/nli-deberta-v3-base"
-NLI_LABEL_MAP  = {0: "contradiction", 1: "entailment", 2: "neutral"}
-VERDICT_MAP    = {"entailment": "GROUNDED", "neutral": "UNCERTAIN",
-                  "contradiction": "HALLUCINATION"}
+import sys
+sys.path.insert(0, os.path.join(BASE_DIR, "src"))
+from nli_utils import (
+    get_embedder, get_nli, build_or_load_index,
+    blackbox_predict_unified, SIMILARITY_THRESHOLD,
+    NLI_LABEL_MAP, VERDICT_MAP,
+)
 
 # ── Lazy-loaded globals ──────────────────────────────────────────────────────
 _llama_tok = None
@@ -75,21 +74,8 @@ def get_llama():
     return _llama_tok, _llama_model
 
 
-def get_embedder():
-    global _embedder
-    if _embedder is None:
-        _embedder = SentenceTransformer(EMBED_MODEL, device="cuda")
-    return _embedder
 
 
-def get_nli():
-    global _nli_tok, _nli_model
-    if _nli_model is None:
-        _nli_tok = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL)
-        _nli_model_tok = AutoTokenizer.from_pretrained(NLI_MODEL)
-        _nli_tok, _nli_model = _nli_model_tok, _nli_tok
-        _nli_model.eval().to("cuda")
-    return _nli_tok, _nli_model
 
 
 def get_classifiers():
@@ -122,7 +108,7 @@ def get_classifiers():
         
         # Fallback: try to load any available model (backward compatibility)
         model_candidates = [
-            ("best_model_final.pkl", "Best Model"),
+            ("ensemble_stacking.pkl", "Stacking Ensemble"),
             ("svm_model_final.pkl", "SVM"),
             ("ada_model_final.pkl", "AdaBoost"),
             ("lr_model_final.pkl", "Logistic Regression"),
@@ -147,17 +133,6 @@ def get_classifiers():
 
 # ── PDF helpers ──────────────────────────────────────────────────────────────
 
-def extract_all_text(pdf_path):
-    doc = fitz.open(pdf_path)
-    pages = []
-    for i, page in enumerate(doc):
-        text = page.get_text().strip()
-        if len(text) > 30:
-            pages.append({"page_num": i + 1, "text": text})
-    doc.close()
-    return pages
-
-
 def extract_page_text(pdf_path, page_num):
     doc = fitz.open(pdf_path)
     idx = page_num - 1
@@ -167,65 +142,6 @@ def extract_page_text(pdf_path, page_num):
     text = doc[idx].get_text().strip()
     doc.close()
     return text[:MAX_CTX_CHARS]
-
-
-def clean_text(text):
-    cleaned = []
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if re.fullmatch(r'\d{1,3}', line):
-            continue
-        if re.match(r'^(en|de|fr|es|it)\s+\S', line) and len(line) < 40:
-            continue
-        if re.match(r'^\(?(figure|fig\.?)\s', line, re.IGNORECASE):
-            continue
-        cleaned.append(line)
-    return " ".join(cleaned)
-
-
-def chunk_text(text):
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    sentences = [s.strip() for s in sentences if s.strip()]
-    chunks, current = [], []
-    for sentence in sentences:
-        current.extend(sentence.split())
-        if len(current) >= CHUNK_SIZE:
-            chunks.append(" ".join(current))
-            current = current[-CHUNK_OVERLAP:]
-    if current:
-        chunks.append(" ".join(current))
-    return chunks
-
-
-def get_pdf_index(pdf_path):
-    """Caches extracted PDF text and its FAISS index to drastically speed up sequential lookups."""
-    global _pdf_cache
-    if pdf_path in _pdf_cache:
-        return _pdf_cache[pdf_path], None
-
-    embedder = get_embedder()
-    pages = extract_all_text(pdf_path)
-    if not pages:
-        return None, "Could not extract text from PDF"
-
-    all_chunks = []
-    for page in pages:
-        for chunk in chunk_text(clean_text(page["text"])):
-            all_chunks.append(chunk)
-
-    if not all_chunks:
-        return None, "No text chunks extracted from PDF"
-
-    vecs = embedder.encode(all_chunks, batch_size=128, show_progress_bar=False,
-                           normalize_embeddings=True, device="cuda").astype(np.float32)
-    dim = vecs.shape[1]
-    index = faiss.IndexFlatIP(dim)
-    index.add(vecs)
-
-    _pdf_cache[pdf_path] = {"chunks": all_chunks, "index": index}
-    return _pdf_cache[pdf_path], None
 
 
 # ── Whitebox: hidden-state extraction ────────────────────────────────────────
@@ -366,71 +282,24 @@ def run_nli_on_chunk(premise, hypothesis):
 
 
 def blackbox_predict(pdf_path, question, answer):
-    """Run blackbox pipeline: FAISS retrieval + NLI."""
-    cache_data, err = get_pdf_index(pdf_path)
-    if err:
-        return None, err
-    index, all_chunks = cache_data["index"], cache_data["chunks"]
-
+    """Blackbox prediction — now delegates to nli_utils.py."""
     embedder = get_embedder()
-    q_vec = embedder.encode([question], normalize_embeddings=True,
-                            device="cuda").astype(np.float32)
-    a_vec = embedder.encode([answer], normalize_embeddings=True,
-                            device="cuda").astype(np.float32)
 
-    seen = set()
-    candidate_chunks = []
-    max_score = -1.0
+    # Build or load the FAISS index for this PDF
+    doc_id = os.path.basename(pdf_path)
+    doc_index = build_or_load_index(pdf_path, doc_id, embedder,
+                                    index_dir=os.path.join(MODELS_DIR, "nli_index"))
+    if doc_index is None:
+        return None, "Could not extract text from PDF"
 
-    # Reduce TOP_K search width to speed up (checking top 3 is usually enough)
-    for query_vec in [a_vec, q_vec]:
-        distances, indices = index.search(query_vec, min(3, len(all_chunks)))
-        for dist, i in zip(distances[0], indices[0]):
-            if dist > max_score:
-                max_score = float(dist)
-            if i >= 0 and all_chunks[i] not in seen:
-                seen.add(all_chunks[i])
-                candidate_chunks.append(all_chunks[i])
+    result = blackbox_predict_unified(
+        doc_index  = doc_index,
+        question   = question,
+        answer     = answer,
+        similarity_threshold = SIMILARITY_THRESHOLD,
+    )
 
-    if not candidate_chunks:
-        return None, "No relevant chunks found"
-
-    # METHOD 1: FAISS Similarity Score Thresholding
-    # If the semantic similarity is too low, the document doesn't contain the answer.
-    SIMILARITY_THRESHOLD = 0.35
-    if max_score < SIMILARITY_THRESHOLD:
-        result = {
-            "verdict": "HALLUCINATION",
-            "entailment": 0.0,
-            "neutral": 0.0,
-            "contradiction": 1.0,
-            "retrieved_context": f"[UNSUPPORTED] Context irrelevant. Highest semantic similarity ({max_score:.2f}) is below threshold ({SIMILARITY_THRESHOLD}).",
-        }
-        gc.collect()
-        return result, None
-
-    best_nli = None
-    best_chunk = candidate_chunks[0]
-    
-    # Use answer as hypothesis directly (full Q&A format causes false positives)
-    for chunk in candidate_chunks:
-        nli = run_nli_on_chunk(premise=chunk, hypothesis=answer)
-        if best_nli is None or nli["entailment"] > best_nli["entailment"]:
-            best_nli = nli
-            best_chunk = chunk
-
-    result = {
-        "verdict": best_nli["verdict"],
-        "entailment": best_nli["entailment"],
-        "neutral": best_nli["neutral"],
-        "contradiction": best_nli["contradiction"],
-        "retrieved_context": best_chunk[:500],
-    }
-    gc.collect()
     return result, None
-
-
-# ── Combined prediction ─────────────────────────────────────────────────────
 
 def _html_error(msg):
     return f"""<div class="error-card"><span class="error-icon">!</span> {msg}</div>"""
@@ -596,8 +465,8 @@ def predict(pdf_file, question, answer, progress=gr.Progress()):
             verdict_cls = "verdict-success"
         elif wb_says_hall and not bb_says_hall:
             if bb_verdict == "UNCERTAIN":
-                verdict_text = "HALLUCINATED"
-                verdict_desc = "Document lacks information to confirm the answer (NLI Neutral), and Whitebox flagged it as a hallucination."
+                verdict_text = "HALLUCINATED"   # keep this — now UNCERTAIN is meaningful
+                verdict_desc = "Whitebox flagged hallucination; NLI entailment below threshold."
                 verdict_cls = "verdict-danger"
             else:
                 verdict_text = "UNCERTAIN"
